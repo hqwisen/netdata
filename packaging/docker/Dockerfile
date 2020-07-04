@@ -24,6 +24,9 @@ ENV EXTRA_INSTALL_OPTS=$EXTRA_INSTALL_OPTS
 COPY . /opt/netdata.git
 WORKDIR /opt/netdata.git
 
+RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
+    mongo-c-driver
+
 # Install from source
 RUN chmod +x netdata-installer.sh && \
    cp -rp /deps/* /usr/local/ && \
