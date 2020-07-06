@@ -26,18 +26,10 @@ WORKDIR /opt/netdata.git
 
 # Compile & install libmongoc-1.0 (required for mongodb exporting)
 
-RUN wget https://github.com/mongodb/mongo-c-driver/releases/download/1.16.0/mongo-c-driver-1.16.0.tar.gz && \
-    tar xzf mongo-c-driver-1.16.0.tar.gz && \
-    cd mongo-c-driver-1.16.0 && \
-    # Compile libbson first
-    mkdir cmake-build-libbson && cd cmake-build-libbson && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib \
-    -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF .. && \
-    make install && \
-    cd .. && mkdir cmake-build-mongoc && cd cmake-build-mongoc && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib \
-    -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF .. && \
-    make install
+# Dependencies to build mongoc
+# see https://github.com/netdata/netdata/issues/9479
+RUN apk update && \
+    apk add --upgrade mongo-c-driver-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.11/community/
 
 # Install from source
 RUN chmod +x netdata-installer.sh && \
@@ -76,6 +68,23 @@ FROM netdata/base:${ARCH}
 # Copy files over
 RUN mkdir -p /opt/src
 COPY --from=builder /app /
+
+# Dependencies to build mongoc
+# see https://github.com/netdata/netdata/issues/9479
+RUN apk update && \
+    apk add --upgrade mongo-c-driver-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.11/community/
+
+# Install firehol for tc.plugin
+
+# Install requirements: iprange, iproute2, ipset
+RUN apk add --no-cache --upgrade --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
+    iprange && \
+    apk add --no-cache iproute2 ipset make && \
+    wget https://github.com/firehol/firehol/releases/download/v3.1.6/firehol-3.1.6.tar.gz && \
+    tar xf firehol-3.1.6.tar.gz && cd firehol-3.1.6 && \
+    ./configure && make install && \
+    cd .. && rm firehol-3.1.6.tar.gz && rm -rf firehol-3.1.6
+
 COPY packaging/docker/health.sh /health.sh
 
 # Configure system
